@@ -79,12 +79,12 @@ contract SupplyChain {
   // an Item has been added?
 
   modifier forSale(uint _sku) {
-    require(items[_sku].state == State.ForSale && items[_sku].sku != 0);
+    require(items[_sku].state == State.ForSale && items[_sku].seller != address(0));
     _;
   }
 
   modifier sold(uint _sku) {
-    require(items[_sku].state == State.Sold);
+    require(items[_sku].state == State.Sold, "Item is not sold");
     _;
   }
   
@@ -102,15 +102,11 @@ contract SupplyChain {
     // 1. Set the owner to the transaction sender
     owner = msg.sender;
     // 2. Initialize the sku count to 0. Question, is this necessary?
+    skuCount = 0;
   }
 
   function addItem(string memory _name, uint _price) public returns (bool) {
     // 1. Create a new item and put in array
-    // 2. Increment the skuCount by one
-    // 3. Emit the appropriate event
-    // 4. return true
-
-    // hint:
     items[skuCount] = Item({
       name: _name, 
       sku: skuCount, 
@@ -119,9 +115,12 @@ contract SupplyChain {
       seller: msg.sender, 
       buyer: address(0)
     });
-    //
+
+    // 2. Increment the skuCount by one
     skuCount = skuCount + 1;
+    // 3. Emit the appropriate event
     emit LogForSale(skuCount);
+    // 4. return true
     return true;
   }
 
@@ -139,11 +138,12 @@ contract SupplyChain {
   function buyItem(uint _sku) 
     public payable 
     forSale(_sku)
-    paidEnough(_sku)
+    paidEnough(items[_sku].price)
     checkValue(_sku)
     {
-    bool sent = items[_sku].seller.send(msg.value);
+    //bool sent = items[_sku].seller.send(msg.value);  // todo read mroe about .transfer() .sent()
     items[_sku].buyer = msg.sender;
+    items[_sku].seller.transfer(items[_sku].price);  // todo read mroe about .transfer() .sent()
     items[_sku].state = State.Sold;
     emit LogSold(_sku);
   }
